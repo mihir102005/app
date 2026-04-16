@@ -81,9 +81,74 @@ class HomeScreen extends StatelessWidget {
               },
               child: const Icon(Icons.file_upload_outlined),
             ),
+            bottomNavigationBar: fileProvider.isMovingItem
+                ? BottomAppBar(
+                    color: const Color(0xFF0F172A),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Moving: ${fileProvider.itemToMove!.name}',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: fileProvider.cancelMove,
+                            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: _isMoveValid(fileProvider) 
+                                ? fileProvider.completeMove 
+                                : () => _showInvalidMoveSnackBar(context, fileProvider),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _isMoveValid(fileProvider) 
+                                  ? const Color(0xFFFACC15) 
+                                  : Colors.grey,
+                            ),
+                            child: const Text('Move Here'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : null,
           ),
         );
       },
+    );
+  }
+
+  bool _isMoveValid(FileProvider provider) {
+    if (provider.itemToMove == null) return false;
+    
+    // 1. Check if same directory
+    final itemDir = provider.itemToMove!.path.substring(0, provider.itemToMove!.path.lastIndexOf('/'));
+    if (itemDir == provider.currentPath) return false;
+
+    // 2. Check if moving folder into itself
+    if (provider.itemToMove!.isDirectory && provider.currentPath.startsWith(provider.itemToMove!.path)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  void _showInvalidMoveSnackBar(BuildContext context, FileProvider provider) {
+    String message = 'Invalid move destination';
+    final itemDir = provider.itemToMove!.path.substring(0, provider.itemToMove!.path.lastIndexOf('/'));
+    
+    if (itemDir == provider.currentPath) {
+      message = 'Item is already in this folder';
+    } else if (provider.itemToMove!.isDirectory && provider.currentPath.startsWith(provider.itemToMove!.path)) {
+      message = 'Cannot move a folder into itself';
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
     );
   }
 
@@ -155,7 +220,32 @@ class FileTile extends StatelessWidget {
           file.isDirectory ? 'Folder' : '${(file.size / 1024).toStringAsFixed(1)} KB',
           style: const TextStyle(fontSize: 12, color: Colors.white60),
         ),
-        trailing: const Icon(Icons.chevron_right, color: Colors.white24),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: Colors.white70),
+              onSelected: (value) {
+                if (value == 'move') {
+                  provider.initiateMove(file);
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'move',
+                  child: Row(
+                    children: [
+                      Icon(Icons.drive_file_move_outlined, size: 20),
+                      SizedBox(width: 8),
+                      Text('Move'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const Icon(Icons.chevron_right, color: Colors.white24),
+          ],
+        ),
       ),
     );
   }

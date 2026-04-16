@@ -65,4 +65,38 @@ class FileProvider extends ChangeNotifier {
   }
   
   bool get isAtRoot => _currentPath == '/home/ubuntuserver/KeepsafeStorage';
+
+  // Move functionality
+  FileItem? _itemToMove;
+  FileItem? get itemToMove => _itemToMove;
+  bool get isMovingItem => _itemToMove != null;
+
+  void initiateMove(FileItem item) {
+    _itemToMove = item;
+    notifyListeners();
+  }
+
+  void cancelMove() {
+    _itemToMove = null;
+    notifyListeners();
+  }
+
+  Future<void> completeMove() async {
+    if (_itemToMove == null) return;
+    
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final success = await _sftpService.moveItem(_itemToMove!.path, _currentPath);
+      if (!success) {
+        debugPrint('Failed to move item');
+      }
+    } catch (e) {
+      debugPrint('Error moving item: $e');
+    } finally {
+      _itemToMove = null;
+      await fetchFiles(); // This will set _isLoading to false and notify
+    }
+  }
 }

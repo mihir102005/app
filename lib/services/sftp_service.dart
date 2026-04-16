@@ -72,5 +72,29 @@ class SFTPService {
     return true;
   }
 
+  /// Moves a file or directory (MOCKED)
+  Future<bool> moveItem(String sourcePath, String destinationPath) async {
+    await Future.delayed(const Duration(seconds: 1));
+    
+    final index = _mockFiles.indexWhere((item) => item.path == sourcePath);
+    if (index != -1) {
+      final oldItem = _mockFiles[index];
+      final newName = oldItem.name;
+      final newPath = destinationPath.endsWith('/') 
+          ? '$destinationPath$newName' 
+          : '$destinationPath/$newName';
+          
+      _mockFiles[index] = FileItem(
+        name: newName,
+        path: newPath,
+        isDirectory: oldItem.isDirectory,
+        size: oldItem.size,
+        lastModified: DateTime.now(),
+      );
+      return true;
+    }
+    return false;
+  }
+
   bool get isConnected => true; // Always "connected" in mock phase
 }
