@@ -1,89 +1,76 @@
 import 'dart:io';
-import 'package:dartssh2/dartssh2.dart';
+import 'package:keepsafe/models/file_item.dart';
 
 class SFTPService {
-  SSHClient? _client;
-  SftpClient? _sftp;
+  // Mock data stored locally for this phase
+  final List<FileItem> _mockFiles = [
+    FileItem(
+      name: 'Documents',
+      path: '/home/ubuntuserver/KeepsafeStorage/Documents',
+      isDirectory: true,
+      size: 0,
+      lastModified: DateTime.now().subtract(const Duration(days: 2)),
+    ),
+    FileItem(
+      name: 'Images',
+      path: '/home/ubuntuserver/KeepsafeStorage/Images',
+      isDirectory: true,
+      size: 0,
+      lastModified: DateTime.now().subtract(const Duration(days: 5)),
+    ),
+    FileItem(
+      name: 'readme.txt',
+      path: '/home/ubuntuserver/KeepsafeStorage/readme.txt',
+      isDirectory: false,
+      size: 1024,
+      lastModified: DateTime.now().subtract(const Duration(hours: 10)),
+    ),
+  ];
 
-  /// Connects to the SFTP server using the provided credentials.
-  /// [host], [port], [username], and [password] are basic connection details.
+  /// Connects to the SFTP server (MOCKED)
   Future<bool> connect({
     required String host,
     required int port,
     required String username,
     String? password,
-    SSHKeyPair? keyPair,
   }) async {
-    try {
-      final socket = await SSHSocket.connect(host, port);
-      
-      _client = SSHClient(
-        socket,
-        username: username,
-        onPasswordRequest: () => password,
-        identities: keyPair != null ? [keyPair] : [],
-      );
-
-      // Authenticate and wait for connection
-      await _client!.authenticated;
-      _sftp = await _client!.sftp();
-      
-      return true;
-    } catch (e) {
-      print('Connection failed: $e');
-      return false;
-    }
+    await Future.delayed(const Duration(seconds: 1));
+    return true; // Always succeeds in mock phase
   }
 
-  /// Disconnects from the server.
-  void disconnect() {
-    _sftp = null;
-    _client?.close();
-    _client = null;
+  /// Disconnects from the server (MOCKED)
+  void disconnect() {}
+
+  /// Returns a list of files in the given directory (MOCKED)
+  Future<List<FileItem>> listFiles(String path) async {
+    await Future.delayed(const Duration(seconds: 1));
+    
+    // For now, return the same mock list regardless of path to simulate navigation
+    // In a real app, this would filter based on path
+    return List.from(_mockFiles);
   }
 
-  /// Uploads a file to the server.
+  /// Creates a new directory on the server (MOCKED)
+  Future<bool> createDirectory(String remotePath) async {
+    await Future.delayed(const Duration(seconds: 1));
+    
+    final name = remotePath.split('/').last;
+    _mockFiles.add(FileItem(
+      name: name,
+      path: remotePath,
+      isDirectory: true,
+      size: 0,
+      lastModified: DateTime.now(),
+    ));
+    
+    return true;
+  }
+
+  /// Placeholder for upload (MOCKED)
   Future<bool> uploadFile(File localFile, String remotePath) async {
-    if (_sftp == null) return false;
-    try {
-      final file = await _sftp!.open(
-        remotePath, 
-        mode: SftpFileOpenMode.create | SftpFileOpenMode.write | SftpFileOpenMode.truncate,
-      );
-      await file.write(localFile.openRead().cast());
-      await file.close();
-      return true;
-    } catch (e) {
-      print('Upload failed: $e');
-      return false;
-    }
+    await Future.delayed(const Duration(seconds: 1));
+    return true;
   }
 
-  /// Downloads a file from the server.
-  Future<bool> downloadFile(String remotePath, String localPath) async {
-    if (_sftp == null) return false;
-    try {
-      final localFile = File(localPath);
-      final sink = localFile.openWrite();
-      await _sftp!.download(remotePath, sink);
-      await sink.close();
-      return true;
-    } catch (e) {
-      print('Download failed: $e');
-      return false;
-    }
-  }
-
-  /// Returns a list of files in the given directory.
-  Future<List<SftpName>> listDirectory(String path) async {
-    if (_sftp == null) return [];
-    try {
-      return await _sftp!.listdir(path);
-    } catch (e) {
-      print('Listing failed: $e');
-      return [];
-    }
-  }
-
-  bool get isConnected => _client != null && _sftp != null;
+  bool get isConnected => true; // Always "connected" in mock phase
 }
