@@ -125,9 +125,8 @@ class HomeScreen extends StatelessWidget {
   bool _isMoveValid(FileProvider provider) {
     if (provider.itemToMove == null) return false;
     
-    // 1. Check if same directory
-    final itemDir = provider.itemToMove!.path.substring(0, provider.itemToMove!.path.lastIndexOf('/'));
-    if (itemDir == provider.currentPath) return false;
+    // 1. Check if same directory (using new sourceDirectory state)
+    if (provider.currentPath == provider.sourceDirectory) return false;
 
     // 2. Check if moving folder into itself
     if (provider.itemToMove!.isDirectory && provider.currentPath.startsWith(provider.itemToMove!.path)) {
@@ -139,9 +138,8 @@ class HomeScreen extends StatelessWidget {
 
   void _showInvalidMoveSnackBar(BuildContext context, FileProvider provider) {
     String message = 'Invalid move destination';
-    final itemDir = provider.itemToMove!.path.substring(0, provider.itemToMove!.path.lastIndexOf('/'));
     
-    if (itemDir == provider.currentPath) {
+    if (provider.currentPath == provider.sourceDirectory) {
       message = 'Item is already in this folder';
     } else if (provider.itemToMove!.isDirectory && provider.currentPath.startsWith(provider.itemToMove!.path)) {
       message = 'Cannot move a folder into itself';

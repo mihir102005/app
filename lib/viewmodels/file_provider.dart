@@ -68,16 +68,21 @@ class FileProvider extends ChangeNotifier {
 
   // Move functionality
   FileItem? _itemToMove;
+  String? _sourceDirectory;
+  
   FileItem? get itemToMove => _itemToMove;
+  String? get sourceDirectory => _sourceDirectory;
   bool get isMovingItem => _itemToMove != null;
 
   void initiateMove(FileItem item) {
     _itemToMove = item;
+    _sourceDirectory = _currentPath;
     notifyListeners();
   }
 
   void cancelMove() {
     _itemToMove = null;
+    _sourceDirectory = null;
     notifyListeners();
   }
 
@@ -96,6 +101,7 @@ class FileProvider extends ChangeNotifier {
       debugPrint('Error moving item: $e');
     } finally {
       _itemToMove = null;
+      _sourceDirectory = null;
       await fetchFiles(); // This will set _isLoading to false and notify
     }
   }
