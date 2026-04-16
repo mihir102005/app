@@ -165,6 +165,9 @@ class SFTPService {
       final directory = await getTemporaryDirectory();
       final tempFile = File('${directory.path}/$fileName');
       
+      // Architect Fix: Ensure file is created before opening sink to avoid Permission Denied
+      await tempFile.create(recursive: true);
+      
       final sink = tempFile.openWrite();
       await _sftp!.download(remotePath, sink);
       await sink.close();
@@ -195,9 +198,16 @@ class SFTPService {
     final destinationPath = _safePath(destinationRelative);
     
     try {
-      // In SFTP rename, the second argument is the full target path including the new filename
+      // Architect Fix: Robust path joining to avoid double slashes and ensure absolute paths
       final fileName = sourceRelative.split('/').last;
-      final fullDestPath = destinationPath.endsWith('/') ? '$destinationPath$fileName' : '$destinationPath/$fileName';
+      String fullDestPath = destinationPath;
+      if (!fullDestPath.endsWith('/')) {
+        fullDestPath += '/';
+      }
+      fullDestPath += fileName;
+      
+      // Replace any potential double slashes (except at the start) with single one
+      fullDestPath = fullDestPath.replaceAll('//', '/');
       
       await _sftp!.rename(sourcePath, fullDestPath);
       return true;
