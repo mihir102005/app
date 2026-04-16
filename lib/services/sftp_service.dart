@@ -5,6 +5,7 @@ import 'package:dartssh2/dartssh2.dart';
 import 'package:yaml/yaml.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter_file_dialog/flutter_file_dialog.dart';
 import 'package:keepsafe/models/file_item.dart';
 
 class SFTPService {
@@ -127,7 +128,7 @@ class SFTPService {
     await _ensureConnected();
     
     try {
-      final result = await FilePicker.platform.pickFiles();
+      final result = await FilePicker.pickFiles();
       if (result == null || result.files.isEmpty) return false;
 
       final platformFile = result.files.first;
@@ -154,22 +155,36 @@ class SFTPService {
     }
   }
 
-  /// Downloads a remote file to the device's application documents directory
+  /// Downloads a remote file to a temporary location, then exports it to the public Downloads folder via a native dialog
   Future<String?> downloadToDevice(String remoteRelativePath, String fileName) async {
     await _ensureConnected();
     final remotePath = _safePath(remoteRelativePath);
     
     try {
-      final directory = await getApplicationDocumentsDirectory();
-      final localFile = File('${directory.path}/$fileName');
+      // Step A: Download to temporary directory first
+      final directory = await getTemporaryDirectory();
+      final tempFile = File('${directory.path}/$fileName');
       
-      final sink = localFile.openWrite();
+      final sink = tempFile.openWrite();
       await _sftp!.download(remotePath, sink);
       await sink.close();
+
+      // Step B: Trigger native "Save As" dialog to export to public filesystem
+      final params = SaveFileDialogParams(
+        sourceFilePath: tempFile.path,
+        fileName: fileName,
+      );
       
-      return localFile.path;
+      final finalPath = await FlutterFileDialog.saveFile(params: params);
+      
+      // Cleanup temp file
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+      
+      return finalPath;
     } catch (e) {
-      throw Exception('Error downloading file: $e');
+      throw Exception('Error downloading and exporting file: $e');
     }
   }
 
