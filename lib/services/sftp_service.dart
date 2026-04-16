@@ -99,7 +99,7 @@ class SFTPService {
           path: path == '/' ? '/${item.filename}' : '$path/${item.filename}',
           isDirectory: item.attr.isDirectory ?? item.longname.startsWith('d'),
           size: item.attr.size ?? 0,
-          lastModified: (item.attr.modifyTime as DateTime?) ?? DateTime.now(),
+          lastModified: DateTime.fromMillisecondsSinceEpoch((item.attr.modifyTime ?? 0) * 1000),
         );
       }).toList();
     } catch (e) {
