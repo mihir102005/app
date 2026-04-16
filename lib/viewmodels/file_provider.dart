@@ -14,7 +14,7 @@ class FileProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   FileProvider() {
-    fetchFiles();
+    Future.microtask(() => fetchFiles());
   }
 
   Future<void> fetchFiles() async {

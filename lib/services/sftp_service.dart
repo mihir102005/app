@@ -45,9 +45,13 @@ class SFTPService {
   Future<List<FileItem>> listFiles(String path) async {
     await Future.delayed(const Duration(seconds: 1));
     
-    // For now, return the same mock list regardless of path to simulate navigation
-    // In a real app, this would filter based on path
-    return List.from(_mockFiles);
+    // Architect Amendment: Return mock list for root, empty list for subfolders
+    if (path == '/home/ubuntuserver/KeepsafeStorage') {
+      return List.from(_mockFiles);
+    }
+    
+    // Always return an actual empty list [] for other paths in this mock phase
+    return <FileItem>[];
   }
 
   /// Creates a new directory on the server (MOCKED)
