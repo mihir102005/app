@@ -90,7 +90,7 @@ class HomeScreen extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              'Moving: ${fileProvider.itemToMove!.name}',
+                              'Moving: ${fileProvider.itemToMove?.name ?? 'Unknown'}',
                               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                               overflow: TextOverflow.ellipsis,
                             ),
