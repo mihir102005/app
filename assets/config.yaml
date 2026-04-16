@@ -1,0 +1,5 @@
+server_ip: "127.0.0.1"
+ssh_port: 2222
+ssh_username: "ubuntuserver"
+remote_base_path: "/home/ubuntuserver/KeepsafeStorage"
+key_path: "assets/keepsafe_app_key"

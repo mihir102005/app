@@ -49,29 +49,57 @@ class HomeScreen extends StatelessWidget {
                       children: [
                         CircularProgressIndicator(),
                         SizedBox(height: 16),
-                        Text('Connecting to server...', style: TextStyle(color: Colors.white70)),
+                        Text('Syncing with server...', style: TextStyle(color: Colors.white70)),
                       ],
                     ),
                   )
-                : fileProvider.files.isEmpty
+                : fileProvider.errorMessage != null
                     ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.folder_open, size: 64, color: Colors.grey[700]),
-                            const SizedBox(height: 16),
-                            const Text('No files found', style: TextStyle(color: Colors.white60)),
-                          ],
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.error_outline, size: 64, color: Colors.redAccent),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Connection Error',
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.redAccent),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                fileProvider.errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.white70),
+                              ),
+                              const SizedBox(height: 24),
+                              ElevatedButton(
+                                onPressed: fileProvider.fetchFiles,
+                                child: const Text('Retry Connection'),
+                              ),
+                            ],
+                          ),
                         ),
                       )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(8),
-                        itemCount: fileProvider.files.length,
-                        itemBuilder: (context, index) {
-                          final file = fileProvider.files[index];
-                          return FileTile(file: file);
-                        },
-                      ),
+                    : fileProvider.files.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.folder_open, size: 64, color: Colors.grey[700]),
+                                const SizedBox(height: 16),
+                                const Text('No files found', style: TextStyle(color: Colors.white60)),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(8),
+                            itemCount: fileProvider.files.length,
+                            itemBuilder: (context, index) {
+                              final file = fileProvider.files[index];
+                              return FileTile(file: file);
+                            },
+                          ),
             floatingActionButton: FloatingActionButton(
               onPressed: () {
                 debugPrint('Upload tapped');

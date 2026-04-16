@@ -5,13 +5,15 @@ import 'package:keepsafe/services/sftp_service.dart';
 class FileProvider extends ChangeNotifier {
   final SFTPService _sftpService = SFTPService();
   
-  String _currentPath = '/home/ubuntuserver/KeepsafeStorage';
+  String _currentPath = '/';
   List<FileItem> _files = [];
   bool _isLoading = false;
+  String? _errorMessage;
 
   String get currentPath => _currentPath;
   List<FileItem> get files => _files;
   bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
 
   FileProvider() {
     Future.microtask(() => fetchFiles());
@@ -19,11 +21,13 @@ class FileProvider extends ChangeNotifier {
 
   Future<void> fetchFiles() async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
       _files = await _sftpService.listFiles(_currentPath);
     } catch (e) {
+      _errorMessage = e.toString();
       debugPrint('Error fetching files: $e');
     } finally {
       _isLoading = false;
@@ -38,33 +42,41 @@ class FileProvider extends ChangeNotifier {
   }
 
   Future<void> navigateUp() async {
-    if (_currentPath == '/home/ubuntuserver/KeepsafeStorage') return;
+    if (_currentPath == '/') return;
     
     // Simple logic to go up one directory
     final parts = _currentPath.split('/');
     if (parts.length > 1) {
       parts.removeLast();
       _currentPath = parts.join('/');
+      if (_currentPath.isEmpty) _currentPath = '/';
       await fetchFiles();
     }
   }
 
   Future<void> createFolder(String name) async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
     
-    final newPath = '$_currentPath/$name';
-    final success = await _sftpService.createDirectory(newPath);
+    final newPath = _currentPath == '/' ? '/$name' : '$_currentPath/$name';
     
-    if (success) {
-      await fetchFiles();
-    } else {
+    try {
+      final success = await _sftpService.createDirectory(newPath);
+      if (success) {
+        await fetchFiles();
+      } else {
+        _isLoading = false;
+        notifyListeners();
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
     }
   }
   
-  bool get isAtRoot => _currentPath == '/home/ubuntuserver/KeepsafeStorage';
+  bool get isAtRoot => _currentPath == '/';
 
   // Move functionality
   FileItem? _itemToMove;
@@ -90,14 +102,16 @@ class FileProvider extends ChangeNotifier {
     if (_itemToMove == null) return;
     
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
       final success = await _sftpService.moveItem(_itemToMove!.path, _currentPath);
       if (!success) {
-        debugPrint('Failed to move item');
+        _errorMessage = 'Failed to move item';
       }
     } catch (e) {
+      _errorMessage = e.toString();
       debugPrint('Error moving item: $e');
     } finally {
       _itemToMove = null;
