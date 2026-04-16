@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:dartssh2/dartssh2.dart';
 import 'package:yaml/yaml.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:keepsafe/models/file_item.dart';
 
 class SFTPService {
@@ -120,23 +122,54 @@ class SFTPService {
     }
   }
 
-  /// Placeholder for upload (Still uses File for local files, but assets are fixed)
-  Future<bool> uploadFile(File localFile, String relativeRemotePath) async {
+  /// Picks a file from the device and uploads it to the current remote path
+  Future<bool> pickAndUpload(String relativeRemotePath) async {
     await _ensureConnected();
-    final remotePath = _safePath(relativeRemotePath);
     
     try {
+      final result = await FilePicker.platform.pickFiles();
+      if (result == null || result.files.isEmpty) return false;
+
+      final platformFile = result.files.first;
+      final localPath = platformFile.path;
+      if (localPath == null) return false;
+
+      final localFile = File(localPath);
+      final remoteFileName = platformFile.name;
+      final remotePath = _safePath(relativeRemotePath.endsWith('/') 
+          ? '$relativeRemotePath$remoteFileName' 
+          : '$relativeRemotePath/$remoteFileName');
+      
       final remoteFile = await _sftp!.open(
         remotePath, 
         mode: SftpFileOpenMode.write | SftpFileOpenMode.create | SftpFileOpenMode.truncate
       );
-      // Convert Stream<List<int>> to Stream<Uint8List>
+      
       final stream = localFile.openRead().map((data) => Uint8List.fromList(data));
       await remoteFile.write(stream);
       await remoteFile.close();
       return true;
     } catch (e) {
-      throw Exception('Error uploading file: $e');
+      throw Exception('Error picking and uploading file: $e');
+    }
+  }
+
+  /// Downloads a remote file to the device's application documents directory
+  Future<String?> downloadToDevice(String remoteRelativePath, String fileName) async {
+    await _ensureConnected();
+    final remotePath = _safePath(remoteRelativePath);
+    
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final localFile = File('${directory.path}/$fileName');
+      
+      final sink = localFile.openWrite();
+      await _sftp!.download(remotePath, sink);
+      await sink.close();
+      
+      return localFile.path;
+    } catch (e) {
+      throw Exception('Error downloading file: $e');
     }
   }
 

@@ -3,8 +3,39 @@ import 'package:provider/provider.dart';
 import 'package:keepsafe/viewmodels/file_provider.dart';
 import 'package:keepsafe/models/file_item.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Schedule snackbar listener
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setupErrorListener();
+    });
+  }
+
+  void _setupErrorListener() {
+    final provider = Provider.of<FileProvider>(context, listen: false);
+    provider.addListener(() {
+      if (provider.errorMessage != null && mounted) {
+        final isSuccess = provider.errorMessage!.startsWith('SUCCESS:');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(provider.errorMessage!),
+            backgroundColor: isSuccess ? Colors.green : Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        provider.clearError();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -100,15 +131,20 @@ class HomeScreen extends StatelessWidget {
                               return FileTile(file: file);
                             },
                           ),
-            floatingActionButton: FloatingActionButton(
-              onPressed: () {
-                debugPrint('Upload tapped');
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Upload placeholder (Phase 3)')),
-                );
-              },
-              child: const Icon(Icons.file_upload_outlined),
-            ),
+            floatingActionButton: fileProvider.isTransferring
+                ? FloatingActionButton(
+                    onPressed: null,
+                    backgroundColor: Colors.grey,
+                    child: const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    ),
+                  )
+                : FloatingActionButton(
+                    onPressed: fileProvider.pickAndUploadFile,
+                    child: const Icon(Icons.file_upload_outlined),
+                  ),
             bottomNavigationBar: fileProvider.isMovingItem
                 ? BottomAppBar(
                     color: const Color(0xFF0F172A),
@@ -249,11 +285,19 @@ class FileTile extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (!file.isDirectory)
+              IconButton(
+                icon: const Icon(Icons.download_for_offline_outlined, color: Colors.cyanAccent),
+                onPressed: provider.isTransferring ? null : () => provider.downloadFile(file),
+                tooltip: 'Download',
+              ),
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, color: Colors.white70),
               onSelected: (value) {
                 if (value == 'move') {
                   provider.initiateMove(file);
+                } else if (value == 'download') {
+                  provider.downloadFile(file);
                 }
               },
               itemBuilder: (context) => [
@@ -267,6 +311,17 @@ class FileTile extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (!file.isDirectory)
+                  const PopupMenuItem(
+                    value: 'download',
+                    child: Row(
+                      children: [
+                        Icon(Icons.download_outlined, size: 20),
+                        SizedBox(width: 8),
+                        Text('Download'),
+                      ],
+                    ),
+                  ),
               ],
             ),
             const Icon(Icons.chevron_right, color: Colors.white24),

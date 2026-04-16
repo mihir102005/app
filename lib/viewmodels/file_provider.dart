@@ -8,11 +8,13 @@ class FileProvider extends ChangeNotifier {
   String _currentPath = '/';
   List<FileItem> _files = [];
   bool _isLoading = false;
+  bool _isTransferring = false;
   String? _errorMessage;
 
   String get currentPath => _currentPath;
   List<FileItem> get files => _files;
   bool get isLoading => _isLoading;
+  bool get isTransferring => _isTransferring;
   String? get errorMessage => _errorMessage;
 
   FileProvider() {
@@ -118,5 +120,53 @@ class FileProvider extends ChangeNotifier {
       _sourceDirectory = null;
       await fetchFiles(); // This will set _isLoading to false and notify
     }
+  }
+
+  /// Picks a local file and uploads it to the current directory
+  Future<void> pickAndUploadFile() async {
+    if (_isTransferring) return;
+    
+    _isTransferring = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final success = await _sftpService.pickAndUpload(_currentPath);
+      if (success) {
+        await fetchFiles();
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isTransferring = false;
+      notifyListeners();
+    }
+  }
+
+  /// Downloads a remote file to the local device
+  Future<void> downloadFile(FileItem file) async {
+    if (_isTransferring) return;
+
+    _isTransferring = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final localPath = await _sftpService.downloadToDevice(file.path, file.name);
+      if (localPath != null) {
+        _errorMessage = 'SUCCESS: Downloaded to $localPath';
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isTransferring = false;
+      notifyListeners();
+    }
+  }
+
+  /// Clear error message after displaying it
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
   }
 }
