@@ -20,18 +20,19 @@ class SFTPService {
   Future<void> _loadConfig() async {
     if (_isConfigLoaded) return;
     try {
-      final configString = await rootBundle.loadString('assets/config.yaml');
-      final yamlMap = loadYaml(configString);
+      // Architect Amendment: Strictly use rootBundle for asset loading
+      final yamlString = await rootBundle.loadString('assets/config.yaml');
+      final config = loadYaml(yamlString);
       
-      _host = yamlMap['server_ip'];
-      _port = yamlMap['ssh_port'];
-      _username = yamlMap['ssh_username'];
-      _remoteBasePath = yamlMap['remote_base_path'];
-      _keyPath = yamlMap['key_path'];
+      _host = config['server_ip'];
+      _port = config['ssh_port'];
+      _username = config['ssh_username'];
+      _remoteBasePath = config['remote_base_path'];
+      _keyPath = config['key_path'];
       
       _isConfigLoaded = true;
     } catch (e) {
-      throw Exception('Failed to load configuration: $e');
+      throw Exception('Failed to load configuration from rootBundle: $e');
     }
   }
 
@@ -44,6 +45,7 @@ class SFTPService {
     }
 
     try {
+      // Architect Amendment: Strictly use rootBundle for key loading
       final keyString = await rootBundle.loadString(_keyPath ?? 'assets/keepsafe_app_key');
       final keyPairs = SSHKeyPair.fromPem(keyString);
       
@@ -118,7 +120,7 @@ class SFTPService {
     }
   }
 
-  /// Placeholder for upload (Now functional)
+  /// Placeholder for upload (Still uses File for local files, but assets are fixed)
   Future<bool> uploadFile(File localFile, String relativeRemotePath) async {
     await _ensureConnected();
     final remotePath = _safePath(relativeRemotePath);
